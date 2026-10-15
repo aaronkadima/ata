@@ -30,6 +30,22 @@ Na tela **Reunião**, marque **Guardar áudio** antes de gravar. Depois de encer
 
 O áudio gravado por `MediaRecorder` permanece em memória até o encerramento/recarregamento da página; faça o download para preservar. Os registros textuais ficam no `localStorage`, mas o áudio não é sincronizado nem guardado em servidor. O processamento do WAV usa `AudioContext.decodeAudioData` e depende dos codecs e da memória do navegador. Arquivos muito grandes podem ser recusados para evitar exaustão de memória.
 
+## Linha do tempo interativa e reprodução posterior
+
+Depois de gravar com **Guardar áudio** habilitado, a forma de onda deixa de ser apenas o monitor visual do microfone e passa a funcionar como linha do tempo do **áudio original**:
+
+- **Clique ou toque** na forma de onda para procurar a posição desejada; **arraste** para percorrer o áudio.
+- **Cursor** acompanha o tempo durante a reprodução; o horário sob o ponteiro aparece como dica.
+- Controle **Reproduzir / Pausar**, cronômetro e velocidades de **0,75× a 2×**.
+- Na forma de onda focada, **← / →** movimentam cinco segundos, **Home / End** vão ao início/fim e **Espaço** reproduz/pausa.
+- O horário de cada **trecho transcrito** também permite navegar para o instante correspondente, quando a gravação estiver carregada.
+- As cores são atribuídas usando as identificações de falantes disponíveis na transcrição; sem identificação, usa-se o azul padrão. **Não há nova diarização inventada pelo player.**
+- Durante a gravação, a onda original continua mostrando a amplitude e as cores do microfone em tempo real.
+
+O aplicativo tenta guardar automaticamente o áudio da reunião em **IndexedDB**, armazenamento local do navegador, separadamente nos ambientes `/dev/` e `/`. Na mesma reunião, use **Reabrir gravação salva** para ouvir depois de atualizar ou reabrir a página; use **Excluir cópia local** para apagar do navegador. Essa retenção é limitada pelo armazenamento do aparelho e pode ser apagada pelo navegador ou pelo usuário. **Baixe o áudio original para backup durável.** Não há sincronização entre aparelhos, conta ou servidor.
+
+A forma de onda da gravação corresponde ao áudio original; na prévia de edição, ela é ocultada para não representar indevidamente os horários do áudio concatenado.
+
 ## Interface
 
 - Navegação desktop lateral e mobile inferior: **Reunião**, **Agenda**, **Atas** e **Ajustes**.
@@ -52,7 +68,8 @@ Não coloque chaves de API, gravações confidenciais ou dados pessoais em arqui
 
 ```
 index.html                  # Aplicativo de reuniões
-assets/audio-editor.js      # Player e editor não destrutivo
+assets/audio-editor.js      # Player, armazenamento local e editor não destrutivo
+assets/waveform-player.js    # Forma de onda navegável sincronizada
 assets/icons.svg            # Ícones vetoriais
 assets/studio.css           # Estilos responsivos do editor
 manifest.webmanifest        # Metadados do app instalável
