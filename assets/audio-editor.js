@@ -66,7 +66,7 @@
     try{await new Promise((resolve,reject)=>{if(player.readyState>=1){resolve();return}const ok=()=>{cleanup();resolve()},bad=()=>{cleanup();reject(Error("Formato de áudio não reconhecido."))},cleanup=()=>{player.removeEventListener("loadedmetadata",ok);player.removeEventListener("error",bad)};player.addEventListener("loadedmetadata",ok);player.addEventListener("error",bad)});if(token!==revision)return;
       duration=player.duration;if(!Number.isFinite(duration)||duration<=0)duration=(await decode()).duration;if(token!==revision)return;
       keep=[[0,duration]];$("audioB").value=duration.toFixed(1);render();notify(label+" carregado. Confira os trechos antes de exportar.");
-      window.dispatchEvent(new CustomEvent("ata:wave:loaded",{detail:{blob:file,player,duration,startElapsedMs:recordingOffset}}));
+      window.dispatchEvent(new CustomEvent("ata:wave:loaded",{detail:{blob:file,player,duration,startElapsedMs:recordingOffset,speakerMap:label!=="Áudio importado"}}));
     }catch(e){notify("Não foi possível abrir o áudio: "+e.message,true);render()}
   }
   function interval(){const a=Number($("audioA").value),b=Number($("audioB").value);if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b>duration||b<=a){notify("Intervalo inválido: ajuste início e fim dentro da gravação.",true);return null}return[a,b]}
