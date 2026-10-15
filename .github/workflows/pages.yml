@@ -44,6 +44,7 @@ jobs:
           test -s development/index.html
           test -s development/assets/audio-editor.js
           node --check development/assets/audio-editor.js
+          node --check development/assets/waveform-player.js
 
       - name: Montar os dois ambientes
         run: |

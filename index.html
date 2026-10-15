@@ -1396,7 +1396,7 @@ async function micStart(){
     rec.mr.ondataavailable=e=>{if(e.data&&e.data.size)rec.chunks.push(e.data)};
     rec.mr.onstop=()=>{rec.audioBlob=new Blob(rec.chunks,{type:rec.mr.mimeType||"audio/webm"});$("dlAudio").hidden=false;window.dispatchEvent(new CustomEvent("ata:audio-ready",{detail:{blob:rec.audioBlob,startElapsedMs:rec.recorderStartElapsedMs||0}}))};
     rec.mr.start(1000)}catch(e){rec.mr=null}}
-  rec.on=true;sizeCanvas();
+  rec.on=true;sizeCanvas();window.dispatchEvent(new Event("ata:recording-start"));
   if(!S.timer.running)start();
   $("micBtn").classList.add("on");$("micTxt").textContent="Parar gravação";$("langSel").disabled=true;$("keepAudio").disabled=true;
   setRecState(recLabel());startRecognition();renderLive();renderSpeakers();setFavicon(true);pipStatus();rec.raf=requestAnimationFrame(loop);
@@ -1448,6 +1448,9 @@ function renderLive(){
     const d=document.createElement("div");d.className="seg"+(s?" s"+s.col:"");d.dataset.seg=seg.id;
     const ts=document.createElement("span");ts.className="ts";ts.textContent=fmt(seg.t);
     if(seg.src==="audio"&&$("impAudio").getAttribute("src")){ts.classList.add("play");ts.title="Ouvir este trecho";ts.tabIndex=0;ts.onclick=()=>seekAudio(seg.t);ts.onkeydown=ev=>{if(ev.key==="Enter")seekAudio(seg.t)}}
+    else if(seg.src!=="audio"){ts.classList.add("play");ts.title="Ouvir este trecho na gravação";ts.tabIndex=0;
+      ts.onclick=()=>{if(!window.ataWaveSeekElapsed?.(seg.t))toast("Finalize ou reabra a gravação para ouvir este trecho")};
+      ts.onkeydown=ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();ts.click()}}}
     const st=document.createElement("span");st.className="st";st.contentEditable="true";st.setAttribute("aria-label","Editar trecho");appendRich(st,seg.text);
     st.addEventListener("blur",()=>{const v=st.innerText.trim();if(v&&v!==seg.text){seg.text=v;const r=analyzeNames(seg);seg.mentions=r.mentions.length?[...new Set(r.mentions)]:undefined;save();renderMentions()}setTimeout(renderLive,0)});
     const acts=document.createElement("span");acts.className="acts";
@@ -1467,6 +1470,9 @@ $("clearSegs").onclick=()=>{
   rec.timeline=[];if(!spkById(rec.curSpk))rec.curSpk=null;save();renderLive();renderSpeakers()};
 $("dlAudio").onclick=()=>{if(rec.audioBlob){const ext=(rec.audioBlob.type.includes("mp4")?"m4a":rec.audioBlob.type.includes("ogg")?"ogg":"webm");saveFile(fileBase()+"_audio."+ext,rec.audioBlob)}};
 window.ataGetRecords=()=>S.entries.map(e=>({elapsed:e.elapsed,type:e.type,text:e.text}));
+window.ataCurrentMeetingId=()=>S.mid;
+window.ataGetWaveSegments=()=>S.segments.map(s=>({id:s.id,elapsed:s.t,col:S.speakers.find(p=>p.id===s.spk)?.col??-1}));
+window.ataFindWaveSegment=id=>{const s=S.segments.find(p=>p.id===id);return s?{elapsed:s.t}:null};
 window.addEventListener("resize",()=>{sizeCanvas();drawWave()});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>drawWave())}catch(e){}
 window.addEventListener("beforeunload",ev=>{if(rec.on){ev.preventDefault();ev.returnValue=""}});
@@ -3369,6 +3375,7 @@ if(S.timer.running)wakeOn();
 })();
 </script>
 <script src="./assets/audio-editor.js" defer></script>
+<script src="./assets/waveform-player.js" defer></script>
 <script>
 (() => {
   const isDev=/\/dev(?:\/|$)/.test(location.pathname);

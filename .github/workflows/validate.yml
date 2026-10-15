@@ -23,4 +23,5 @@ jobs:
           test -s assets/icons.svg
           test -s assets/studio.css
           node --check assets/audio-editor.js
+          node --check assets/waveform-player.js
           node tests/check.js
