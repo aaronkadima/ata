@@ -3,9 +3,9 @@
   const host=document.querySelector(".recp");if(!host)return;
   const panel=document.createElement("details");panel.id="audioStudio";panel.className="audio-studio";
   panel.innerHTML=`<summary><svg class="ui-icon" aria-hidden="true"><use href="./assets/icons.svg#headphones"/></svg> <span>Ouvir e editar gravação</span><span id="audioSummary">Nenhum áudio</span><svg class="ui-icon arrow" aria-hidden="true"><use href="./assets/icons.svg#chevron-down"/></svg></summary>
-  <div class="studio-body"><p class="studio-tip">O áudio original é preservado. O editor mantém apenas os intervalos selecionados na cópia exportada. Salve os arquivos antes de fechar a página.</p>
+  <div class="studio-body"><p class="studio-tip">O áudio original é preservado. A gravação é salva apenas neste navegador para poder reabri-la mais tarde; faça também o download como cópia de segurança. A edição altera somente o arquivo exportado.</p>
   <div class="studio-row"><label class="btn sm studio-file"><svg class="ui-icon"><use href="./assets/icons.svg#upload"/></svg> Abrir áudio <input id="audioPick" type="file" accept="audio/*,video/webm,video/mp4,.wav,.webm,.ogg,.mp3,.m4a" hidden></label>
-  <button id="audioOriginal" class="btn sm" type="button">Ouvir original</button></div>
+  <button id="audioOriginal" class="btn sm" type="button">Ouvir original</button><button id="audioRestore" class="btn sm" type="button" disabled>Reabrir gravação salva</button><button id="audioForget" class="btn sm ghost" type="button" disabled>Excluir cópia local</button></div>
   <audio id="audioPlayer" controls preload="metadata" aria-label="Gravação da reunião"></audio>
   <div id="audioRanges" class="audio-ranges" aria-label="Trechos preservados na gravação"></div>
   <div class="studio-row"><label>Segundos antes <input id="audioPre" type="number" min="0" max="300" value="10"></label><label>Segundos depois <input id="audioPost" type="number" min="0" max="300" value="25"></label><button id="audioAuto" class="btn sm primary" type="button"><svg class="ui-icon"><use href="./assets/icons.svg#list-check"/></svg> Manter só trechos registrados</button></div>
@@ -18,6 +18,34 @@
   const $=id=>document.getElementById(id),player=$("audioPlayer");
   const actions=["audioOriginal","audioAuto","audioMarkA","audioMarkB","audioCut","audioKeep","audioReset","audioPreview","audioExport"];
   let file=null,url=null,previewUrl=null,duration=0,recordingOffset=0,keep=[],decoded=null,revision=0;
+  const DEV=/\/dev(?:\/|$)/.test(location.pathname);
+  const DB="ata-recordings-v2"+(DEV?"-dev":"-prod");
+  function meetingId(){return String(window.ataCurrentMeetingId?.()||"current")}
+  function openDb(){return new Promise((resolve,reject)=>{
+    if(!window.indexedDB){reject(new Error("IndexedDB indisponível"));return}
+    const req=indexedDB.open(DB,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("audio"))req.result.createObjectStore("audio")};
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("Armazenamento indisponível"));
+  })}
+  async function database(mode,callback){const db=await openDb();try{return await new Promise((resolve,reject)=>{
+    const tx=db.transaction("audio",mode),request=callback(tx.objectStore("audio"));
+    request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("Falha no armazenamento"));
+    tx.onabort=()=>reject(tx.error||new Error("Transação cancelada"));
+  })}finally{db.close()}}
+  async function localAvailability(){try{const item=await database("readonly",s=>s.get(meetingId()));$("audioRestore").disabled=!item;$("audioForget").disabled=!item;}
+    catch(_){$("audioRestore").disabled=true;$("audioForget").disabled=true}}
+  async function saveAudio(blob,startElapsedMs){
+    try{await database("readwrite",s=>s.put({blob,startElapsedMs,createdAt:Date.now()},meetingId()));
+      await localAvailability();notify("Gravação salva neste navegador. Você pode reabri-la depois; faça backup pelo botão Baixar áudio.");
+    }catch(_){notify("Áudio disponível nesta sessão, mas não foi possível salvá-lo no dispositivo. Faça o download.",true)}
+  }
+  $("audioRestore").onclick=async()=>{try{const item=await database("readonly",s=>s.get(meetingId()));if(!item?.blob)throw Error("Nenhuma gravação salva para esta reunião.");
+    await load(item.blob,item.startElapsedMs||0,"Gravação reaberta");}catch(e){notify("Não foi possível reabrir: "+e.message,true)}};
+  let deletionArmed=false;
+  $("audioForget").onclick=async()=>{if(!deletionArmed){deletionArmed=true;notify("Clique novamente em Excluir cópia local para confirmar. O áudio já aberto continuará disponível nesta sessão.");return}
+    deletionArmed=false;try{await database("readwrite",s=>s.delete(meetingId()));await localAvailability();notify("Cópia local desta reunião excluída. Exporte o áudio antes de sair se quiser guardá-lo.");}
+    catch(e){notify("Não foi possível excluir a cópia local: "+e.message,true)}
+  };
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
   const nice=n=>Number.isFinite(n)?n.toFixed(1).replace(".",","):"0";
   function notify(msg,error){const el=$("audioFeedback");el.textContent=msg;el.classList.toggle("error",!!error)}
@@ -30,7 +58,7 @@
     $("audioA").max=$("audioB").max=String(duration);
   }
   function release(){if(url)URL.revokeObjectURL(url);if(previewUrl)URL.revokeObjectURL(previewUrl);url=previewUrl=null}
-  function clear(){revision++;player.pause();player.removeAttribute("src");player.load();release();file=decoded=null;duration=recordingOffset=0;keep=[];notify("");render()}
+  function clear(){revision++;player.pause();player.removeAttribute("src");player.load();release();file=decoded=null;duration=recordingOffset=0;keep=[];notify("");render();window.dispatchEvent(new Event("ata:wave:cleared"))}
   async function decode(){if(decoded)return decoded;if(!file)throw Error("Nenhum áudio selecionado.");
     const Context=window.AudioContext||window.webkitAudioContext;if(!Context)throw Error("Decodificação indisponível neste navegador.");
     const ctx=new Context();try{decoded=await ctx.decodeAudioData(await file.arrayBuffer());return decoded}finally{await ctx.close()}}
@@ -38,11 +66,12 @@
     try{await new Promise((resolve,reject)=>{if(player.readyState>=1){resolve();return}const ok=()=>{cleanup();resolve()},bad=()=>{cleanup();reject(Error("Formato de áudio não reconhecido."))},cleanup=()=>{player.removeEventListener("loadedmetadata",ok);player.removeEventListener("error",bad)};player.addEventListener("loadedmetadata",ok);player.addEventListener("error",bad)});if(token!==revision)return;
       duration=player.duration;if(!Number.isFinite(duration)||duration<=0)duration=(await decode()).duration;if(token!==revision)return;
       keep=[[0,duration]];$("audioB").value=duration.toFixed(1);render();notify(label+" carregado. Confira os trechos antes de exportar.");
+      window.dispatchEvent(new CustomEvent("ata:wave:loaded",{detail:{blob:file,player,duration,startElapsedMs:recordingOffset}}));
     }catch(e){notify("Não foi possível abrir o áudio: "+e.message,true);render()}
   }
   function interval(){const a=Number($("audioA").value),b=Number($("audioB").value);if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b>duration||b<=a){notify("Intervalo inválido: ajuste início e fim dentro da gravação.",true);return null}return[a,b]}
   $("audioPick").addEventListener("change",e=>{const f=e.target.files?.[0];e.target.value="";if(f)load(f,0,"Áudio importado")});
-  $("audioOriginal").onclick=()=>{if(url){player.pause();player.src=url;player.play().catch(()=>{});notify("Reproduzindo o áudio original.")}};
+  $("audioOriginal").onclick=()=>{if(url){player.pause();player.src=url;window.dispatchEvent(new CustomEvent("ata:wave:mode",{detail:{mode:"original"}}));player.play().catch(()=>{});notify("Reproduzindo o áudio original.")}};
   $("audioMarkA").onclick=()=>{$("audioA").value=player.currentTime.toFixed(1)};
   $("audioMarkB").onclick=()=>{$("audioB").value=player.currentTime.toFixed(1)};
   $("audioReset").onclick=()=>{keep=[[0,duration]];render();notify("Todos os trechos restaurados na seleção.")};
@@ -63,12 +92,15 @@
     return new Blob([data],{type:"audio/wav"});
   }
   async function process(kind){const btn=$(kind==="preview"?"audioPreview":"audioExport"),old=btn.innerHTML;btn.disabled=true;btn.textContent="Processando…";notify("Processando áudio neste navegador…");
-    try{const out=await wav();if(kind==="preview"){if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(out);player.pause();player.src=previewUrl;await player.play();notify("Reproduzindo só os trechos mantidos.");}
+    try{const out=await wav();if(kind==="preview"){if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(out);player.pause();player.src=previewUrl;window.dispatchEvent(new CustomEvent("ata:wave:mode",{detail:{mode:"edited"}}));await player.play();notify("Reproduzindo só os trechos mantidos.");}
       else{const link=document.createElement("a"),downloadUrl=URL.createObjectURL(out);link.href=downloadUrl;link.download="ata_audio_editado.wav";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(downloadUrl),60000);notify("Áudio editado exportado, sem alterar o original.");}
     }catch(e){notify("Falha no processamento: "+e.message,true)}finally{btn.innerHTML=old;render()}
   }
   $("audioPreview").onclick=()=>process("preview");$("audioExport").onclick=()=>process("export");
-  window.addEventListener("ata:audio-ready",e=>{if(e.detail?.blob)load(e.detail.blob,e.detail.startElapsedMs||0,"Gravação finalizada")});
+  window.ataDecodeAudio=decode;
+  window.addEventListener("ata:audio-ready",e=>{if(e.detail?.blob){load(e.detail.blob,e.detail.startElapsedMs||0,"Gravação finalizada");saveAudio(e.detail.blob,e.detail.startElapsedMs||0)}});
+  window.addEventListener("ata:recording-start",clear);
   window.addEventListener("ata:audio-reset",clear);
-  render();
+  render();localAvailability();
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)localAvailability()});
 })();
