@@ -15,11 +15,13 @@
   const ctx=canvas.getContext("2d");
   const colors=["--s0","--s1","--s2","--s3","--s4","--s5","--s6","--s7"];
   let player=null,duration=0,peaks=[],speakers=[],startMs=0,hover=null,drag=false,ready=false,seq=0,raf=0;
+  const attached=new WeakSet();
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const format=sec=>{const s=Math.max(0,Math.floor(sec||0));return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s%3600/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
   const pal=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#3559c7";
   function draw(){
-    if(!ready||!ctx)return;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    if(!ready||!ctx||canvas.hidden)return;
     const rect=canvas.getBoundingClientRect();
     if(!rect.width||!rect.height)return;
     const dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
@@ -79,7 +81,7 @@
   async function load(detail){
     reset();if(!detail||!detail.blob||!detail.player||!(detail.duration>0))return;
     const token=seq;player=detail.player;duration=detail.duration;startMs=Number(detail.startElapsedMs)||0;
-    const items=window.ataGetWaveSegments?.()||[];
+    const items=detail.speakerMap===false?[]:(window.ataGetWaveSegments?.()||[]);
     speakers=items.filter(s=>Number.isFinite(Number(s.elapsed))).map(s=>({time:(Number(s.elapsed)-startMs)/1000,col:Number(s.col)})).filter(s=>s.time>=0&&s.time<=duration).sort((a,b)=>a.time-b.time);
     try{
       const buffer=await window.ataDecodeAudio();
@@ -95,17 +97,21 @@
       }
       if(token!==seq)return;
       ready=true;liveCanvas.hidden=true;canvas.hidden=false;bar.hidden=false;box.classList.add("wave-has-replay");
-      player.addEventListener("timeupdate",update);
-      player.addEventListener("seeked",update);
-      player.addEventListener("play",update);
-      player.addEventListener("pause",update);
-      player.addEventListener("ended",update);
+      if(!attached.has(player)){
+        attached.add(player);
+        for(const type of ["timeupdate","seeked","play","pause","ended"])player.addEventListener(type,update);
+      }
       draw();
     }catch(err){
       if(token!==seq)return;reset();console.warn("Não foi possível desenhar a gravação:",err);
     }
   }
   window.addEventListener("ata:wave:loaded",event=>load(event.detail));
+  window.addEventListener("ata:wave:mode",event=>{
+    if(!ready)return;
+    if(event.detail?.mode==="edited"){cancelAnimationFrame(raf);raf=0;canvas.hidden=true;bar.hidden=true;liveCanvas.hidden=false;box.classList.remove("wave-has-replay")}
+    else{canvas.hidden=false;bar.hidden=false;liveCanvas.hidden=true;box.classList.add("wave-has-replay");draw()}
+  });
   window.addEventListener("ata:audio-reset",reset);
   window.addEventListener("ata:recording-start",reset);
   window.addEventListener("resize",()=>{if(ready)draw()});
