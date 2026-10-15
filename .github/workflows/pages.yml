@@ -2,8 +2,12 @@ name: Publicar ATA · Produção e Desenvolvimento
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Validar ATA desenvolvimento"]
+    types: [completed]
+    branches: [develop]
 
 permissions:
   contents: read
@@ -11,11 +15,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "github-pages-ata"
+  group: github-pages-ata
   cancel-in-progress: false
 
 jobs:
-  validate-and-deploy:
+  deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -33,14 +38,14 @@ jobs:
           ref: develop
           path: development
 
-      - name: Validar arquivos
+      - name: Validar estrutura e JavaScript
         run: |
           test -s production/index.html
           test -s development/index.html
           test -s development/assets/audio-editor.js
           node --check development/assets/audio-editor.js
 
-      - name: Montar páginas independentes
+      - name: Montar os dois ambientes
         run: |
           mkdir -p _site/dev
           cp production/index.html production/manifest.webmanifest _site/
@@ -48,8 +53,8 @@ jobs:
           cp development/index.html development/manifest.webmanifest _site/dev/
           cp -R development/assets _site/dev/assets
           touch _site/.nojekyll
-          test -f _site/dev/assets/audio-editor.js
-          test -f _site/assets/icon.svg
+          test -s _site/index.html
+          test -s _site/dev/index.html
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
@@ -61,6 +66,6 @@ jobs:
         with:
           path: _site
 
-      - name: Publicar os dois ambientes
+      - name: Publicar produção e desenvolvimento
         id: deployment
         uses: actions/deploy-pages@v4
