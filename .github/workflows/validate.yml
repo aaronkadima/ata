@@ -1,0 +1,26 @@
+name: Validar ATA desenvolvimento
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter desenvolvimento
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+      - name: Verificar arquivos e sintaxe JavaScript
+        run: |
+          test -s index.html
+          test -s assets/audio-editor.js
+          test -s assets/icons.svg
+          test -s assets/studio.css
+          node --check assets/audio-editor.js
+          node tests/check.js
