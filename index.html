@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
-<title>Registrador de Reunião</title>
+<title>Registrador de Reunião · ATA</title>
 <meta name="theme-color" content="#ffffff">
 <meta name="description" content="Registre reuniões, acompanhe transcrições e produza atas e relatórios.">
 <link rel="icon" type="image/svg+xml" href="./assets/icon.svg">
@@ -532,7 +532,8 @@ body{margin:0;padding:0;background:var(--paper);font-family:var(--f-body);font-s
 @media(max-width:410px){.top{align-items:flex-start}.top h1{font-size:24px}.top #newBtn{font-size:11px;padding:8px}.clock .btns{flex-direction:column}.clock .btns .btn{width:100%}.rec-top{padding:12px}.types{flex-wrap:nowrap;overflow-x:auto}.type{white-space:nowrap}.meta{padding:17px}}
 @media print{.app-sidebar{display:none!important}.app-content{display:contents}.wrap{padding:0}body{padding:0!important}}
 </style>
-<div class="app-shell"><aside class="app-sidebar"><div class="app-brand">R  /  Registro</div><nav aria-label="Navegação principal" class="app-nav"><button aria-pressed="true" class="nav-item active" data-view="meeting" type="button"><span aria-hidden="true" class="nav-icon">◉</span><span>Reunião</span></button><button aria-pressed="false" class="nav-item" data-view="schedule" type="button"><span aria-hidden="true" class="nav-icon">▦</span><span>Agenda</span></button><button aria-pressed="false" class="nav-item" data-view="documents" type="button"><span aria-hidden="true" class="nav-icon">▤</span><span>Atas</span></button><button aria-pressed="false" class="nav-item" data-view="settings" type="button"><span aria-hidden="true" class="nav-icon">⚙</span><span>Ajustes</span></button></nav><div class="sidebar-foot">REGISTRADOR  ·  REUNIÕES</div></aside><div class="app-content"><div class="wrap">
+<link rel="stylesheet" href="./assets/studio.css">
+<div class="app-shell"><aside class="app-sidebar"><div class="app-brand"><span class="brand-mark">A</span><span class="brand-name">ATA · Registro</span></div><nav aria-label="Navegação principal" class="app-nav"><button aria-pressed="true" class="nav-item active" data-view="meeting" type="button"><svg class="nav-icon" aria-hidden="true"><use href="./assets/icons.svg#mic"></use></svg><span>Reunião</span></button><button aria-pressed="false" class="nav-item" data-view="schedule" type="button"><svg class="nav-icon" aria-hidden="true"><use href="./assets/icons.svg#calendar"></use></svg><span>Agenda</span></button><button aria-pressed="false" class="nav-item" data-view="documents" type="button"><svg class="nav-icon" aria-hidden="true"><use href="./assets/icons.svg#file-text"></use></svg><span>Atas</span></button><button aria-pressed="false" class="nav-item" data-view="settings" type="button"><svg class="nav-icon" aria-hidden="true"><use href="./assets/icons.svg#settings"></use></svg><span>Ajustes</span></button></nav><div class="sidebar-foot">REGISTRADOR  ·  REUNIÕES</div></aside><div class="app-content"><div class="wrap">
 <p class="page-eyebrow" id="viewEyebrow">ESPAÇO DE TRABALHO / REUNIÃO</p><header class="top">
 <h1>Sua reunião</h1>
 <div class="ex-flag" hidden="" id="exFlag">
@@ -822,7 +823,8 @@ body{margin:0;padding:0;background:var(--paper);font-family:var(--f-body);font-s
 <script>
 (function(){
 const $=id=>document.getElementById(id);
-const KEY="registrador-reuniao-v1";
+const IS_DEV=/\/dev(?:\/|$)/.test(location.pathname);
+const KEY="registrador-reuniao-v1"+(IS_DEV?"-dev":"");
 const TYPES=[
   {k:"nota",n:"Nota",key:"1"},
   {k:"decisao",n:"Decisão",key:"2"},
@@ -993,7 +995,7 @@ function renderCounts(){const c=$("counts");c.textContent="";
 /* ---------- gravação: ondas, falantes, vocabulário e transcrição ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const cv=$("wave"),cx=cv.getContext("2d");
-const LEVELS=240,NB=18,NSPK=8,PKEY="registrador-prefs-v1";
+const LEVELS=240,NB=18,NSPK=8,PKEY="registrador-prefs-v1"+(IS_DEV?"-dev":"");
 const DEFAULT_GLOS=[
   ["PMO",["pmo","p m o","pê eme ó","pê m ó","pm ó","pê emeó","pemo"]],
   ["KPIs",["kpis","kpi's","k p i s","capis","cape is","kapis","cá pê is","que pi ais","kei pi ais","kpi s","kipis"]],
@@ -1390,9 +1392,9 @@ async function micStart(){
   rec.proc=rec.actx.createScriptProcessor(2048,1,1);rec.fdt=2048/rec.actx.sampleRate*1000;
   const mute=rec.actx.createGain();mute.gain.value=0;src.connect(rec.proc);rec.proc.connect(mute);mute.connect(rec.actx.destination);
   rec.proc.onaudioprocess=onAudio;rec.nf=null;rec.cur=null;
-  if($("keepAudio").checked&&window.MediaRecorder){try{rec.chunks=[];rec.mr=new MediaRecorder(rec.stream);
+  if($("keepAudio").checked&&window.MediaRecorder){try{rec.chunks=[];rec.recorderStartElapsedMs=elapsed();rec.mr=new MediaRecorder(rec.stream);
     rec.mr.ondataavailable=e=>{if(e.data&&e.data.size)rec.chunks.push(e.data)};
-    rec.mr.onstop=()=>{rec.audioBlob=new Blob(rec.chunks,{type:rec.mr.mimeType||"audio/webm"});$("dlAudio").hidden=false};
+    rec.mr.onstop=()=>{rec.audioBlob=new Blob(rec.chunks,{type:rec.mr.mimeType||"audio/webm"});$("dlAudio").hidden=false;window.dispatchEvent(new CustomEvent("ata:audio-ready",{detail:{blob:rec.audioBlob,startElapsedMs:rec.recorderStartElapsedMs||0}}))};
     rec.mr.start(1000)}catch(e){rec.mr=null}}
   rec.on=true;sizeCanvas();
   if(!S.timer.running)start();
@@ -1464,6 +1466,7 @@ $("clearSegs").onclick=()=>{
   rec.clearArm=false;$("clearSegs").textContent="Limpar transcrição";S.segments=[];S.speakers=S.speakers.filter(s=>s.enrolled).map(s=>Object.assign(s,{talk:0}));
   rec.timeline=[];if(!spkById(rec.curSpk))rec.curSpk=null;save();renderLive();renderSpeakers()};
 $("dlAudio").onclick=()=>{if(rec.audioBlob){const ext=(rec.audioBlob.type.includes("mp4")?"m4a":rec.audioBlob.type.includes("ogg")?"ogg":"webm");saveFile(fileBase()+"_audio."+ext,rec.audioBlob)}};
+window.ataGetRecords=()=>S.entries.map(e=>({elapsed:e.elapsed,type:e.type,text:e.text}));
 window.addEventListener("resize",()=>{sizeCanvas();drawWave()});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>drawWave())}catch(e){}
 window.addEventListener("beforeunload",ev=>{if(rec.on){ev.preventDefault();ev.returnValue=""}});
@@ -2468,7 +2471,7 @@ function renderTplExtras(){
 $("clearEx").onclick=()=>{S=blankState();save();renderAll();$("mTitle").focus()};
 $("newBtn").onclick=()=>{$("newBox").hidden=false;$("newBtn").hidden=true};
 $("newNo").onclick=()=>{$("newBox").hidden=true;$("newBtn").hidden=false};
-$("newYes").onclick=()=>{if(rec.on)micStop();rec.audioBlob=null;$("dlAudio").hidden=true;rec.levels=[];rec.lvCol=[];rec.timeline=[];rec.curSpk=null;rec.liveSpk=null;wakeOff();S=blankState();save();$("newBox").hidden=true;$("newBtn").hidden=false;renderAll();toast("Registro apagado. Pronto para nova reunião.")};
+$("newYes").onclick=()=>{if(rec.on)micStop();rec.audioBlob=null;window.dispatchEvent(new Event("ata:audio-reset"));$("dlAudio").hidden=true;rec.levels=[];rec.lvCol=[];rec.timeline=[];rec.curSpk=null;rec.liveSpk=null;wakeOff();S=blankState();save();$("newBox").hidden=true;$("newBtn").hidden=false;renderAll();toast("Registro apagado. Pronto para nova reunião.")};
 
 /* ---------- relatório ---------- */
 function spkName(id){const s=S.speakers.find(x=>x.id===id);return s?s.name:"Falante não identificado"}
@@ -3363,5 +3366,19 @@ if(S.timer.running)wakeOn();
  const end=document.getElementById('endBtn');if(end)end.addEventListener('click',()=>{setTimeout(()=>go('documents'),350)});
  const report=document.getElementById('report');
  if(report){const observer=new MutationObserver(()=>{if(!report.hidden&&location.hash==='#documentos')go('documents')});observer.observe(report,{attributes:true,attributeFilter:['hidden']});}
+})();
+</script>
+<script src="./assets/audio-editor.js" defer></script>
+<script>
+(() => {
+  const isDev=/\/dev(?:\/|$)/.test(location.pathname);
+  const footer=document.querySelector(".sidebar-foot");
+  if(footer){
+    const chip=document.createElement("span");
+    chip.className="env-chip "+(isDev?"dev":"prod");
+    chip.textContent=isDev?"DESENVOLVIMENTO · DEV":"PRODUÇÃO · MAIN";
+    footer.append(chip);
+  }
+  if(isDev) document.title="[DEV] "+document.title;
 })();
 </script>
