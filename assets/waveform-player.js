@@ -14,7 +14,7 @@
   const button=bar.querySelector(".replay-toggle"),clock=bar.querySelector(".replay-clock"),speed=bar.querySelector("select");
   const ctx=canvas.getContext("2d");
   const colors=["--s0","--s1","--s2","--s3","--s4","--s5","--s6","--s7"];
-  let player=null,duration=0,peaks=[],speakers=[],startMs=0,hover=null,drag=false,ready=false,seq=0,raf=0;
+  let player=null,duration=0,peaks=[],speakers=[],barColors=[],startMs=0,hover=null,drag=false,ready=false,seq=0,raf=0;
   const attached=new WeakSet();
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const format=sec=>{const s=Math.max(0,Math.floor(sec||0));return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s%3600/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
@@ -27,12 +27,11 @@
     const dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
     if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
     ctx.clearRect(0,0,w,h);const n=peaks.length||1,bw=w/n,mid=h/2,progress=clamp((player?.currentTime||0)/duration,0,1);
-    const neutral=pal("--accent"),done=pal("--ink-3");
+    const neutral=pal("--accent"),done=pal("--ink-3"),themeColors=colors.map(pal);
     ctx.lineWidth=Math.max(1,dpr);
     for(let i=0;i<n;i++){
-      const time=(i+0.5)/n*duration;
-      const entry=speakers.findLast?.(s=>s.time<=time) || (()=>{let hit=null;for(const s of speakers){if(s.time>time)break;hit=s}return hit})();
-      const base=entry&&time-entry.time<=7&&entry.col>=0?pal(colors[entry.col%colors.length]):neutral;
+      const col=barColors[i]??-1;
+      const base=col>=0?themeColors[col%themeColors.length]:neutral;
       ctx.fillStyle=(i+0.5)/n<=progress?base:base;
       ctx.globalAlpha=(i+0.5)/n<=progress?1:0.52;
       const peak=Math.max(.035,peaks[i]||0),bh=Math.max(2*dpr,Math.min(h*.88,peak*h*.94));
@@ -77,7 +76,7 @@
   });
   button.addEventListener("click",()=>{if(!ready||!player)return;if(player.paused)player.play().catch(()=>{});else player.pause();draw()});
   speed.addEventListener("change",()=>{if(player)player.playbackRate=Number(speed.value)});
-  function reset(){seq++;cancelAnimationFrame(raf);raf=0;ready=false;canvas.hidden=true;bar.hidden=true;tip.hidden=true;hover=null;peaks=[];speakers=[];player=null;duration=0;drag=false;liveCanvas.hidden=false;box.classList.remove("wave-has-replay")}
+  function reset(){seq++;cancelAnimationFrame(raf);raf=0;ready=false;canvas.hidden=true;bar.hidden=true;tip.hidden=true;hover=null;peaks=[];speakers=[];barColors=[];player=null;duration=0;drag=false;liveCanvas.hidden=false;box.classList.remove("wave-has-replay")}
   async function load(detail){
     reset();if(!detail||!detail.blob||!detail.player||!(detail.duration>0))return;
     const token=seq;player=detail.player;duration=detail.duration;startMs=Number(detail.startElapsedMs)||0;
@@ -96,6 +95,12 @@
         peaks[i]=Math.pow(Math.min(1,max),.72);
       }
       if(token!==seq)return;
+      let cursor=0,last=null;
+      barColors=peaks.map((_,i)=>{
+        const t=(i+.5)/peaks.length*duration;
+        while(cursor<speakers.length&&speakers[cursor].time<=t)last=speakers[cursor++];
+        return last&&t-last.time<=7&&last.col>=0?last.col:-1;
+      });
       ready=true;liveCanvas.hidden=true;canvas.hidden=false;bar.hidden=false;box.classList.add("wave-has-replay");
       if(!attached.has(player)){
         attached.add(player);
