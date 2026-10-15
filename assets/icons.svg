@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></symbol>
+<symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+<symbol id="file-text" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/></symbol>
+<symbol id="settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a2 2 0 0 1 0 2.2l-1.2 1.2a2 2 0 0 1-2.2 0l-1.1-.6a8 8 0 0 1-2 .8l-.3 1.2H10l-.3-1.2a8 8 0 0 1-2-.8l-1.1.6a2 2 0 0 1-2.2 0l-1.2-1.2a2 2 0 0 1 0-2.2l.6-1.1a8 8 0 0 1-.8-2L2 11.6V10l1.2-.3a8 8 0 0 1 .8-2l-.6-1.1a2 2 0 0 1 0-2.2L4.6 3a2 2 0 0 1 2.2 0l1.1.6a8 8 0 0 1 2-.8L10.2 2h2l.3 1.2a8 8 0 0 1 2 .8l1.1-.6a2 2 0 0 1 2.2 0L19 4.6a2 2 0 0 1 0 2.2l-.6 1.1a8 8 0 0 1 .8 2L21 10v1.6l-1.2.3a8 8 0 0 1-.8 2z" transform="translate(1 1) scale(.92)"/></symbol>
+<symbol id="headphones" viewBox="0 0 24 24"><path d="M3 14v-3a9 9 0 0 1 18 0v3M3 14v3a3 3 0 0 0 3 3h2v-8H6a3 3 0 0 0-3 3M21 14v3a3 3 0 0 1-3 3h-2v-8h2a3 3 0 0 1 3 3"/></symbol>
+<symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></symbol>
+<symbol id="download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 17v3h16v-3"/></symbol>
+<symbol id="upload" viewBox="0 0 24 24"><path d="M12 17V4m-5 5 5-5 5 5M4 17v3h16v-3"/></symbol>
+<symbol id="scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8.1 8.1 12 12M8.1 15.9l12-12"/></symbol>
+<symbol id="list-check" viewBox="0 0 24 24"><path d="m3 6 2 2 3-4M11 6h10M3 13l2 2 3-4M11 13h10M4 20h17"/></symbol>
+<symbol id="chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+</defs></svg>
