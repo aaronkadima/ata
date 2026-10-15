@@ -1,54 +1,64 @@
-# Registrador de Reunião · Ata
+# ATA · Registrador de Reunião
 
-Aplicativo web responsivo, com interface para desktop e dispositivos móveis, para registrar reuniões, organizar pautas e elaborar atas e relatórios.
+Aplicativo web estático, responsivo e em português, com pauta, gravação, transcrição, registros classificados, atas, relatórios e assinaturas.
 
-## Executar
+## Ambientes web
 
-Abra o arquivo `index.html` em um navegador moderno ou publique o conteúdo da raiz do repositório por GitHub Pages. Para acesso ao microfone e outras APIs do navegador, use **HTTPS** (o GitHub Pages já fornece HTTPS).
+| Ambiente | Branch de origem | Endereço no GitHub Pages | Uso |
+| --- | --- | --- | --- |
+| Produção | `main` | https://aaronkadima.github.io/ata/ | Versão estável |
+| Desenvolvimento | `develop` | https://aaronkadima.github.io/ata/dev/ | Validação de novos recursos |
 
-## Funcionalidades incluídas
+As páginas são publicadas pelo mesmo workflow no GitHub Actions, iniciado na `main`. Cada push em `develop` executa `Validar ATA desenvolvimento`; após validação, o workflow da `main` prepara e publica ambos os caminhos. Um push em `main` também publica as duas versões.
 
-- Identificação da reunião: título, data, local, coordenação, relator, participantes e pauta
-- Cronômetro e estados de início e encerramento
-- Gravação de áudio e transcrição, de acordo com os recursos e permissões do navegador
-- Reconhecimento/identificação de falantes, com opções de revisão
-- Registros classificados como nota, decisão, ação, questão e risco
-- Linha do tempo e classificação automática
-- Importação de convites de calendário (.ics)
-- Geração, edição e exportação de atas, relatórios e documentos
-- Modelos e configurações de formatação
-- Fluxos de revisão, aprovação e assinaturas
-- Assistente virtual opcional, com configuração própria
-- Interface adaptativa para desktop e celular
+**Ativação inicial:** em **Settings → Pages → Build and deployment → Source**, selecione **GitHub Actions**. A publicação depende de permissões de Pages e de uma execução bem-sucedida em **Actions**.
 
-A implementação preserva o JavaScript e os IDs da aplicação anterior, acrescentando a navegação reduzida e o layout minimalista.
+A versão de desenvolvimento usa chaves de `localStorage` com sufixo `-dev`, separadas das utilizadas em produção. A navegação do aplicativo permanece independente nos dois endereços.
 
-## Instalação como aplicativo no celular
+## Gravação e edição de áudio
 
-Quando publicado em HTTPS, abra o site no Chrome ou Safari e use a opção **Adicionar à tela inicial** ou **Instalar aplicativo**, conforme o navegador. O manifesto identifica o aplicativo, mas não há `service worker` de cache offline; portanto, não é prometido funcionamento integral sem internet.
+Na tela **Reunião**, marque **Guardar áudio** antes de gravar. Depois de encerrar a captura, abra **Ouvir e editar gravação**.
 
-## Publicação no GitHub Pages
+- **Ouvir original** reproduz integralmente o áudio capturado.
+- **Manter só trechos registrados** preserva intervalos próximos aos registros da linha do tempo. O usuário define o número de segundos **antes** e **depois** de cada registro, confirma os intervalos e ouve a seleção.
+- **Excluir intervalo** e **Manter intervalo** permitem refinar os cortes, usando posições em segundos ou os botões de marcação da posição atual.
+- **Ouvir versão editada** reproduz apenas as partes preservadas.
+- **Exportar editado (.wav)** gera localmente uma cópia PCM/WAV sem modificar o arquivo original.
+- O botão antigo **Baixar áudio** ainda exporta a captura original sem cortes.
 
-A workflow `.github/workflows/pages.yml` publica os arquivos estáticos da raiz a partir da branch `main`. Em **Settings → Pages**, escolha **GitHub Actions** como fonte da publicação, caso o Pages ainda não esteja ativado.
+**Atenção:** “trechos não registrados” significa intervalos do áudio fora das janelas de tempo associadas aos registros da ata; **não** há classificação semântica automática capaz de identificar toda fala importante. A marcação temporal de registros deve ser revisada. A seleção é inicialmente não destrutiva; nada é apagado do áudio original.
 
-Endereço esperado após a ativação e o sucesso da publicação: https://aaronkadima.github.io/ata/
+O áudio gravado por `MediaRecorder` permanece em memória até o encerramento/recarregamento da página; faça o download para preservar. Os registros textuais ficam no `localStorage`, mas o áudio não é sincronizado nem guardado em servidor. O processamento do WAV usa `AudioContext.decodeAudioData` e depende dos codecs e da memória do navegador. Arquivos muito grandes podem ser recusados para evitar exaustão de memória.
 
-## Privacidade e limitações
+## Interface
 
-- Os registros e configurações são mantidos localmente no navegador por meio de `localStorage`; **não há autenticação, sincronização entre dispositivos ou backup em servidor**.
-- O áudio, os modelos de transcrição e a geração de relatórios dependem das permissões, memória, compatibilidade do navegador e/ou serviços externos configurados.
-- Serviços externos opcionais, incluindo um provedor de IA para o assistente virtual, podem transmitir conteúdo da reunião ao fornecedor. Leia os avisos do aplicativo e as políticas de cada serviço.
-- **Não insira chaves privadas compartilhadas ou credenciais de produção no código-fonte.** Uma chave usada diretamente no navegador pode ser exposta ao usuário do próprio navegador; para uso institucional, mova chamadas autenticadas para um backend seguro.
-- Para ata formal, assinatura, validade jurídica e conformidade com LGPD, revise os documentos e os procedimentos de consentimento, armazenamento e assinatura aplicáveis.
+- Navegação desktop lateral e mobile inferior: **Reunião**, **Agenda**, **Atas** e **Ajustes**.
+- Controles secundários fora do foco principal; transcrição e gravação agrupadas.
+- Ícones vetoriais em `assets/icons.svg`, desenhados no estilo de traço discreto da referência no Canva. O arquivo Canva consultado não disponibilizou ícones editáveis para exportação, portanto não são arquivos originais do Canva.
+- Estilos do estúdio e ícones em `assets/studio.css`.
 
-## Estrutura
+## Desenvolvimento
 
-```
-index.html                  # aplicação web responsiva
-manifest.webmanifest        # metadados de instalação
-assets/icon.svg             # ícone do aplicativo
-.github/workflows/pages.yml # implantação estática
-.nojekyll                   # publicação de assets sem processamento Jekyll
+Edite e teste a branch `develop`; revise o resultado em `/dev/` antes de abrir PR para `main`. Ao aprovar e mesclar o PR, as mudanças passam a produção.
+
+```sh
+node --check assets/audio-editor.js
+node tests/check.js
 ```
 
-Designs relacionados: [Figma](https://www.figma.com/design/dWmJGlLAVfmuC5DymOsB6n) · [Canva](https://canva.link/010uevpvtumxqzy).
+Não coloque chaves de API, gravações confidenciais ou dados pessoais em arquivos versionados. Em reuniões com pessoas identificadas, obtenha as autorizações necessárias para gravação e tratamento de dados. Os recursos de transcrição/IA podem exigir permissões, serviços ou modelos externos.
+
+## Principais arquivos
+
+```
+index.html                  # Aplicativo de reuniões
+assets/audio-editor.js      # Player e editor não destrutivo
+assets/icons.svg            # Ícones vetoriais
+assets/studio.css           # Estilos responsivos do editor
+manifest.webmanifest        # Metadados do app instalável
+tests/check.js              # Validação estática das integrações
+.github/workflows/validate.yml # Lint na develop
+.github/workflows/pages.yml    # Deploy main → / e develop → /dev/
+```
+
+[Referência Figma](https://www.figma.com/design/dWmJGlLAVfmuC5DymOsB6n) · [Conceito Canva](https://canva.link/010uevpvtumxqzy).
