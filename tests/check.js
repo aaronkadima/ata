@@ -33,7 +33,7 @@ assert.match(wave,/pointerdown/);
 assert.match(wave,/pointermove/);
 assert.match(wave,/ArrowRight/);
 assert.match(wave,/aria-valuenow/);
-assert.match(wave,/decodeAudio/);
+assert.match(wave,/ataDecodeAudio/);
 assert.match(wave,/timeupdate/);
 assert.match(wave,/ata:wave:mode/);
 assert.match(css,/wave-has-replay/);
